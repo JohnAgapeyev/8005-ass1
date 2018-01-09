@@ -2,7 +2,7 @@ CC=gcc
 BASEFLAGS=-Wall -Wextra -std=c11 -pedantic -D_POSIX_C_SOURCE=200809L -fopenmp
 DEBUGFLAGS=-ggdb -O0
 RELEASEFLAGS=-O3 -march=native -flto -DNDEBUG
-CLIBS=-pthread
+CLIBS=-pthread -lrt
 EXEC=8005-ass1.elf
 DEPS=$(EXEC).d
 SRCWILD=$(wildcard *.c)
