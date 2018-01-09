@@ -1,5 +1,5 @@
 CC=gcc
-BASEFLAGS=-Wall -Wextra -std=c11 -pedantic -D_POSIX_C_SOURCE=200809L
+BASEFLAGS=-Wall -Wextra -std=c11 -pedantic -D_POSIX_C_SOURCE=200809L -fopenmp
 DEBUGFLAGS=-ggdb -O0
 RELEASEFLAGS=-O3 -march=native -flto -DNDEBUG
 CLIBS=-pthread

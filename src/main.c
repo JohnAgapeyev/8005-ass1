@@ -2,32 +2,14 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <sys/types.h>
+#include <signal.h>
+#include <pthread.h>
+#include <semaphore.h>
+#include <omp.h>
+#include "main.h"
 
-static struct option long_options[] = {
-    {"workers",    required_argument, 0, 'w'},
-    {"help",       no_argument,       0, 'h'},
-    {"thread",     no_argument,       0, 't'},
-    {"process",    no_argument,       0, 'p'},
-    {"openmp",     no_argument,       0, 'o'},
-    {0,            0,                 0,  0}
-};
-
-#define print_help() \
-    do { \
-        printf("usage options:\n"\
-                "\t [w]orkers <5-256>       - the number of workers to use, default: 8\n"\
-                "\t [t]hread                - Use threads as worker type\n"\
-                "\t [p]rocess               - Use processes as worker type\n"\
-                "\t [o]penmp                - Use OpenMP as worker type\n"\
-                "\t [h]elp                  - this message\n"\
-                );\
-    } while(0)
-
-enum worker_type {
-    THREADS = 1,
-    PROCESSES = 2,
-    OPENMP = 3
-};
+static sem_t semaphore;
 
 int main(int argc, char **argv) {
     long worker_count = 8;
@@ -66,13 +48,75 @@ int main(int argc, char **argv) {
     }
     switch(type) {
         case THREADS:
+            sem_init(&semaphore, 0, worker_count);
+            thread_work(worker_count);
+            sem_destroy(&semaphore);
             break;
         case PROCESSES:
+            sem_init(&semaphore, 0, worker_count);
+            process_work(worker_count);
+            sem_destroy(&semaphore);
             break;
         case OPENMP:
+            sem_init(&semaphore, 0, worker_count);
+            openmp_work(worker_count);
+            sem_destroy(&semaphore);
             break;
         default:
             print_help();
             return EXIT_SUCCESS;
     }
+    return EXIT_SUCCESS;
+}
+
+void thread_work(const long count) {
+    pthread_t threads[count];
+    for (long i = 0; i < count; ++i) {
+        if (pthread_create(threads + i, NULL, do_work, NULL) != 0) {
+            for (long j = 0; j < i; ++j) {
+                pthread_kill(threads[j], SIGQUIT);
+            }
+            break;
+        }
+    }
+    for (long i = 0; i < count; ++i) {
+        sem_wait(&semaphore);
+    }
+}
+
+void process_work(const long count) {
+    pid_t child_pid;
+    signal(SIGQUIT, SIG_IGN);
+    for (long i = 0; i < count; ++i) {
+        switch ((child_pid = fork())) {
+            case 0:
+                //Child process
+                do_work(NULL);
+                return;
+            case -1:
+                kill(-getpid(), SIGQUIT);
+                break;
+            default:
+                //Parent process
+                break;
+        }
+    }
+    for (long i = 0; i < count; ++i) {
+        sem_wait(&semaphore);
+    }
+}
+
+void openmp_work(const long count) {
+    omp_set_dynamic(0);
+#pragma omp parallel for schedule(static, 1) num_threads(count)
+    for (long i = 0; i < count; ++i) {
+        do_work(NULL);
+    }
+}
+
+void *do_work(void *arg) {
+    sem_wait(&semaphore);
+    //Do slow stuff here
+    sem_post(&semaphore);
+    return NULL;
 }
