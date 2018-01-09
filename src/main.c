@@ -76,10 +76,9 @@ void thread_work(const long count) {
 }
 
 void process_work(const long count) {
-    pid_t child_pid;
     signal(SIGQUIT, SIG_IGN);
     for (long i = 0; i < count; ++i) {
-        switch ((child_pid = fork())) {
+        switch (fork()) {
             case 0:
                 //Child process
                 do_work(NULL);
