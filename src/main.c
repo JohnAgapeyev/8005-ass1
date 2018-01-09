@@ -100,7 +100,6 @@ int main(int argc, char **argv) {
             free(semaphore);
             return EXIT_SUCCESS;
     }
-    printf("We're done\n");
     return EXIT_SUCCESS;
 }
 
@@ -130,7 +129,6 @@ void process_work(const long count) {
             case 0:
                 //Child process
                 do_work(NULL);
-                printf("Child done\n");
                 exit(EXIT_SUCCESS);
             case -1:
                 kill(0, SIGQUIT);
@@ -143,11 +141,9 @@ void process_work(const long count) {
     for (unsigned long i = 0; i < 1000; ++i) {
         sched_yield();
     }
-    printf("Parent pre wait\n");
     for (long i = 0; i < count; ++i) {
         sem_wait(semaphore);
     }
-    printf("Parent post wait\n");
 }
 
 void openmp_work(const long count) {
@@ -159,9 +155,7 @@ void openmp_work(const long count) {
 }
 
 void *do_work(void *arg) {
-    printf("Child wait\n");
     sem_wait(semaphore);
-    printf("Child got\n");
     //Do slow stuff here
     sleep(4);
     sem_post(semaphore);
