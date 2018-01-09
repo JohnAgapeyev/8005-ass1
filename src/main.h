@@ -7,6 +7,7 @@ static struct option long_options[] = {
     {"thread",     no_argument,       0, 't'},
     {"process",    no_argument,       0, 'p'},
     {"openmp",     no_argument,       0, 'o'},
+    {"all",        no_argument,       0, 'a'},
     {0,            0,                 0,  0}
 };
 
@@ -17,6 +18,7 @@ static struct option long_options[] = {
                 "\t [t]hread                - Use threads as worker type\n"\
                 "\t [p]rocess               - Use processes as worker type\n"\
                 "\t [o]penmp                - Use OpenMP as worker type\n"\
+                "\t [a]all                  - Test all worker types\n"\
                 "\t [h]elp                  - this message\n"\
                 );\
     } while(0)
@@ -24,7 +26,8 @@ static struct option long_options[] = {
 enum worker_type {
     THREADS = 1,
     PROCESSES = 2,
-    OPENMP = 3
+    OPENMP = 3,
+    ALL = 4
 };
 
 void thread_work(const long count);

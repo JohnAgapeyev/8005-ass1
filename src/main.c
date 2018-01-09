@@ -14,7 +14,7 @@ int main(int argc, char **argv) {
     int c;
     for (;;) {
         int option_index = 0;
-        if ((c = getopt_long(argc, argv, "w:htpo", long_options, &option_index)) == -1) {
+        if ((c = getopt_long(argc, argv, "w:htpoa", long_options, &option_index)) == -1) {
             break;
         }
         switch (c) {
@@ -34,6 +34,9 @@ int main(int argc, char **argv) {
             case 'o':
                 type = OPENMP;
                 break;
+            case 'a':
+                type = ALL;
+                break;
             case 'h':
                 //Intentional fallthrough
             case '?':
@@ -44,6 +47,11 @@ int main(int argc, char **argv) {
         }
     }
     switch(type) {
+        case ALL:
+            thread_work(worker_count);
+            process_work(worker_count);
+            openmp_work(worker_count);
+            break;
         case THREADS:
             thread_work(worker_count);
             break;
