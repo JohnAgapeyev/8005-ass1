@@ -234,6 +234,21 @@ void *do_work(void *arg) {
         char *nstr = BN_bn2dec(n);
 
         printf("Initial number %s Factors %s %s\n", nstr, dstr, facstr);
+
+        free(dstr);
+        free(facstr);
+        free(nstr);
+        BN_free(factor);
     }
+    BN_free(x);
+    BN_free(y);
+    BN_free(d);
+    BN_free(n);
+    BN_free(p);
+    BN_free(q);
+    BN_free(zero);
+    BN_free(neg_one);
+    BN_free(diff);
+    BN_CTX_free(ctx);
     return NULL;
 }
