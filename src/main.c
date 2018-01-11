@@ -120,8 +120,7 @@ int main(int argc, char **argv) {
             openmp_work(worker_count);
             break;
         case THREADS:
-            //thread_work(worker_count);
-            thread_work(1);
+            thread_work(worker_count);
             break;
         case PROCESSES:
             process_work(worker_count);
@@ -180,75 +179,61 @@ void openmp_work(const long count) {
 }
 
 void *do_work(void *arg) {
-#if 0
-    BIGNUM *expo = BN_new();
-    BN_set_word(expo, 65537);
-    //BN_one(expo);
-    BIGNUM *base = BN_new();
-    BN_rand(base, 1024, BN_RAND_TOP_TWO, BN_RAND_BOTTOM_ANY);
-
-    printf("Base and expo set\n");
+    BIGNUM *x = BN_new();
+    BIGNUM *y = BN_new();
+    BIGNUM *d = BN_new();
+    BIGNUM *n = BN_new();
 
     BIGNUM *p = BN_new();
     BIGNUM *q = BN_new();
-    BN_generate_prime_ex(p, 1024, 1, NULL, NULL, NULL);
-    printf("P set\n");
-    BN_generate_prime_ex(q, 2048, 1, NULL, NULL, NULL);
-    printf("Q set\n");
-
+    BN_generate_prime_ex(p, 48, 1, NULL, NULL, NULL);
+    BN_generate_prime_ex(q, 48, 1, NULL, NULL, NULL);
     BN_CTX *ctx = BN_CTX_new();
 
-    BIGNUM *modulus = BN_new();
-    BN_mul(modulus, p, q, ctx);
-    printf("Modulus done\n");
+    BN_mul(n, p, q, ctx);
 
-    for (unsigned long i = 0; i < 100; ++i) {
-        BN_mod_exp(base, base, expo, modulus, ctx);
-        printf("%lu modexp done\n", i);
-    }
-#else
-#if 0
-    BIGNUM *p = BN_new();
-    for (int i = 3; i <= 10; ++i) {
-        BN_generate_prime_ex(p, 1 << i, 1, NULL, NULL, NULL);
-        //BN_generate_prime_ex(p, 768, 1, NULL, NULL, NULL);
-        printf("%d prime generated\n", 1 << i);
-    }
-#else
-    BIGNUM *num = BN_new();
-    BIGNUM *p = BN_new();
-    BIGNUM *q = BN_new();
-    BN_generate_prime_ex(p, 28, 1, NULL, NULL, NULL);
-    BN_generate_prime_ex(q, 28, 1, NULL, NULL, NULL);
-    BN_CTX *ctx = BN_CTX_new();
+    BN_one(d);
+    BN_set_word(x, 2);
+    BN_set_word(y, 2);
 
-    BN_mul(num, p, q, ctx);
-
-    BIGNUM *div = BN_new();
-    BIGNUM *rem = BN_new();
-    BIGNUM *i = BN_new();
-    BIGNUM *root = nth_root(num, 2);
     BIGNUM *zero = BN_new();
     BN_zero(zero);
 
-    char *numstr = BN_bn2dec(num);
-    printf("Number: %s\n", numstr);
+    BIGNUM *neg_one = BN_new();
+    BN_zero(neg_one);
+    BN_sub_word(neg_one, 1);
 
-    char *rootstr = BN_bn2dec(root);
-    printf("Root: %s\n", rootstr);
+    BIGNUM *diff = BN_new();
 
-    for (BN_set_word(i, 2); BN_cmp(i, root) != 0; BN_add_word(i, 1)) {
-        BN_div(div, rem, num, i, ctx);
-        if (BN_cmp(rem, zero) == 0) {
-            char *str = BN_bn2dec(div);
-            char *istr = BN_bn2dec(i);
-            printf("Factors: %s %s\n", istr, str);
-            break;
+    while(BN_cmp(d, BN_value_one()) == 0) {
+        //x = x^2 + 1 mod n
+        BN_sqr(x, x, ctx);
+        BN_mod_add(x, x, BN_value_one(), n, ctx);
+
+        //y = g(g(y))
+        BN_sqr(y, y, ctx);
+        BN_mod_add(y, y, BN_value_one(), n, ctx);
+        BN_sqr(y, y, ctx);
+        BN_mod_add(y, y, BN_value_one(), n, ctx);
+
+        BN_sub(diff, x, y);
+        if (BN_cmp(diff, zero) < 0) {
+            BN_mul(diff, diff, neg_one, ctx);
         }
+        BN_gcd(d, diff, n, ctx);
     }
-#endif
-#endif
-    //Do slow stuff here
-    //sleep(4);
+    if (BN_cmp(d, n) == 0) {
+        //Failure to factor
+        printf("Failed to factor\n");
+    } else {
+        //We're good
+        char *dstr = BN_bn2dec(d);
+        BIGNUM *factor = BN_new();
+        BN_div(factor, NULL, n, d, ctx);
+        char *facstr = BN_bn2dec(factor);
+        char *nstr = BN_bn2dec(n);
+
+        printf("Initial number %s Factors %s %s\n", nstr, dstr, facstr);
+    }
     return NULL;
 }
