@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <getopt.h>
 #include <signal.h>
 #include <pthread.h>
@@ -8,6 +10,9 @@
 #include <sys/wait.h>
 #include <openssl/bn.h>
 #include "main.h"
+
+static const char *mixed_filename = ".input.txt";
+static void init_mixed(long count);
 
 /*
  * Calculates the nth root using Newton's method and the OpenSSL Bignum library
@@ -113,6 +118,7 @@ int main(int argc, char **argv) {
                 return EXIT_SUCCESS;
         }
     }
+    init_mixed(worker_count);
     switch(type) {
         case ALL:
             thread_work(worker_count);
@@ -179,6 +185,14 @@ void openmp_work(const long count) {
 }
 
 void *do_work(void *arg) {
+    (void)arg;
+    do_cpu_work();
+    do_io_work();
+    do_mixed_work();
+    return NULL;
+}
+
+void do_cpu_work(void) {
     BIGNUM *x = BN_new();
     BIGNUM *y = BN_new();
     BIGNUM *d = BN_new();
@@ -186,8 +200,8 @@ void *do_work(void *arg) {
 
     BIGNUM *p = BN_new();
     BIGNUM *q = BN_new();
-    BN_generate_prime_ex(p, 48, 1, NULL, NULL, NULL);
-    BN_generate_prime_ex(q, 48, 1, NULL, NULL, NULL);
+    BN_generate_prime_ex(p, 32, 1, NULL, NULL, NULL);
+    BN_generate_prime_ex(q, 32, 1, NULL, NULL, NULL);
     BN_CTX *ctx = BN_CTX_new();
 
     BN_mul(n, p, q, ctx);
@@ -250,5 +264,125 @@ void *do_work(void *arg) {
     BN_free(neg_one);
     BN_free(diff);
     BN_CTX_free(ctx);
-    return NULL;
+}
+
+void do_io_work(void) {
+    const char *filename = ".tmp.txt";
+    int file = open(filename, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+    long file_size = 1 << 20;
+    long read_count = 4096;
+    //Set file size to 1 MB
+    ftruncate(file, file_size);
+
+    char buffer[read_count];
+    for (long i = 0; i < file_size; ++i) {
+        lseek(file, rand() % (file_size - read_count), SEEK_SET);
+        read(file, buffer, read_count);
+        lseek(file, rand() % (file_size - read_count), SEEK_SET);
+        write(file, buffer, read_count);
+    }
+    close(file);
+    unlink(filename);
+}
+
+void do_mixed_work(void) {
+    int file = open(mixed_filename, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+    FILE *file_p = fdopen(file, "rwb");
+
+    BIGNUM *n = NULL;
+    BIGNUM *x = BN_new();
+    BIGNUM *y = BN_new();
+    BIGNUM *d = BN_new();
+    BIGNUM *diff = BN_new();
+
+    BIGNUM *zero = BN_new();
+    BN_zero(zero);
+
+    BIGNUM *neg_one = BN_new();
+    BN_zero(neg_one);
+    BN_sub_word(neg_one, 1);
+
+    BN_CTX *ctx = BN_CTX_new();
+
+    char input[1024];
+    memset(input, 0, 1024);
+    while(fgets(input, 1023, file_p)) {
+        input[strlen(input) - 1] = '\0';
+        BN_hex2bn(&n, input);
+
+        BN_one(d);
+        BN_set_word(x, 2);
+        BN_set_word(y, 2);
+
+        while(BN_cmp(d, BN_value_one()) == 0) {
+            //x = x^2 + 1 mod n
+            BN_sqr(x, x, ctx);
+            BN_mod_add(x, x, BN_value_one(), n, ctx);
+
+            //y = g(g(y))
+            BN_sqr(y, y, ctx);
+            BN_mod_add(y, y, BN_value_one(), n, ctx);
+            BN_sqr(y, y, ctx);
+            BN_mod_add(y, y, BN_value_one(), n, ctx);
+
+            BN_sub(diff, x, y);
+            if (BN_cmp(diff, zero) < 0) {
+                BN_mul(diff, diff, neg_one, ctx);
+            }
+            BN_gcd(d, diff, n, ctx);
+        }
+        if (BN_cmp(d, n) == 0) {
+            //Failure to factor
+            printf("Failed to factor\n");
+        } else {
+            //We're good
+            char *dstr = BN_bn2dec(d);
+            BIGNUM *factor = BN_new();
+            BN_div(factor, NULL, n, d, ctx);
+            char *facstr = BN_bn2dec(factor);
+            char *nstr = BN_bn2dec(n);
+
+            printf("Initial number %s Factors %s %s\n", nstr, dstr, facstr);
+
+            free(dstr);
+            free(facstr);
+            free(nstr);
+            BN_free(factor);
+        }
+    }
+    BN_free(x);
+    BN_free(y);
+    BN_free(d);
+    BN_free(n);
+    BN_free(zero);
+    BN_free(neg_one);
+    BN_free(diff);
+
+    BN_CTX_free(ctx);
+
+    close(file);
+    unlink(mixed_filename);
+}
+
+static void init_mixed(long count) {
+    BIGNUM *p = BN_new();
+    BIGNUM *q = BN_new();
+    BIGNUM *n = BN_new();
+    BN_CTX *ctx = BN_CTX_new();
+
+    int file = open(mixed_filename, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+
+    for (long i = 0; i < 100 * count; ++i) {
+        BN_generate_prime_ex(p, 24, 1, NULL, NULL, NULL);
+        BN_generate_prime_ex(q, 24, 1, NULL, NULL, NULL);
+        BN_mul(n, p, q, ctx);
+
+        char *n_hex = BN_bn2hex(n);
+        write(file, n_hex, strlen(n_hex));
+        write(file, "\n", 1);
+
+        free(n_hex);
+    }
+
+    close(file);
 }

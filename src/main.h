@@ -35,5 +35,8 @@ void process_work(const long count);
 void openmp_work(const long count);
 
 void *do_work(void *arg);
+void do_cpu_work(void);
+void do_io_work(void);
+void do_mixed_work(void);
 
 #endif
