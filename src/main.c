@@ -136,12 +136,15 @@ int main(int argc, char **argv) {
             break;
         default:
             print_help();
+            unlink(mixed_filename);
             return EXIT_SUCCESS;
     }
+    unlink(mixed_filename);
     return EXIT_SUCCESS;
 }
 
 void thread_work(const long count) {
+    printf("Thread start\n");
     pthread_t threads[count];
     for (long i = 0; i < count; ++i) {
         if (pthread_create(threads + i, NULL, do_work, NULL) != 0) {
@@ -154,9 +157,11 @@ void thread_work(const long count) {
     for (long i = 0; i < count; ++i) {
         pthread_join(threads[i], NULL);
     }
+    printf("Thread end\n");
 }
 
 void process_work(const long count) {
+    printf("Process start\n");
     signal(SIGQUIT, SIG_IGN);
     for (long i = 0; i < count; ++i) {
         switch (fork()) {
@@ -174,21 +179,40 @@ void process_work(const long count) {
     }
     //Spin until all children are gone
     while(wait(NULL) != -1);
+    printf("Process end\n");
 }
 
 void openmp_work(const long count) {
+    printf("OpenMP start\n");
     omp_set_dynamic(0);
 #pragma omp parallel for schedule(static, 1) num_threads(count)
     for (long i = 0; i < count; ++i) {
         do_work(NULL);
     }
+    printf("OpenMP end\n");
 }
 
 void *do_work(void *arg) {
     (void)arg;
+    struct timespec start, end;
+    clock_gettime(CLOCK_MONOTONIC_RAW, &start);
     do_cpu_work();
+    clock_gettime(CLOCK_MONOTONIC_RAW, &end);
+    uint64_t delta_us = (end.tv_sec - start.tv_sec) * 1000000 + ((end.tv_nsec - start.tv_nsec) / 1000);
+    printf("CPU: %lu\n", delta_us);
+
+#if 1
+    clock_gettime(CLOCK_MONOTONIC_RAW, &start);
     do_io_work();
+    clock_gettime(CLOCK_MONOTONIC_RAW, &end);
+    delta_us = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_nsec - start.tv_nsec) / 1000;
+    printf("I/O %lu\n", delta_us);
+    clock_gettime(CLOCK_MONOTONIC_RAW, &start);
     do_mixed_work();
+    clock_gettime(CLOCK_MONOTONIC_RAW, &end);
+    delta_us = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_nsec - start.tv_nsec) / 1000;
+    printf("Mixed: %lu\n", delta_us);
+#endif
     return NULL;
 }
 
@@ -235,24 +259,6 @@ void do_cpu_work(void) {
             BN_mul(diff, diff, neg_one, ctx);
         }
         BN_gcd(d, diff, n, ctx);
-    }
-    if (BN_cmp(d, n) == 0) {
-        //Failure to factor
-        printf("Failed to factor\n");
-    } else {
-        //We're good
-        char *dstr = BN_bn2dec(d);
-        BIGNUM *factor = BN_new();
-        BN_div(factor, NULL, n, d, ctx);
-        char *facstr = BN_bn2dec(factor);
-        char *nstr = BN_bn2dec(n);
-
-        printf("Initial number %s Factors %s %s\n", nstr, dstr, facstr);
-
-        free(dstr);
-        free(facstr);
-        free(nstr);
-        BN_free(factor);
     }
     BN_free(x);
     BN_free(y);
@@ -331,24 +337,6 @@ void do_mixed_work(void) {
             }
             BN_gcd(d, diff, n, ctx);
         }
-        if (BN_cmp(d, n) == 0) {
-            //Failure to factor
-            printf("Failed to factor\n");
-        } else {
-            //We're good
-            char *dstr = BN_bn2dec(d);
-            BIGNUM *factor = BN_new();
-            BN_div(factor, NULL, n, d, ctx);
-            char *facstr = BN_bn2dec(factor);
-            char *nstr = BN_bn2dec(n);
-
-            printf("Initial number %s Factors %s %s\n", nstr, dstr, facstr);
-
-            free(dstr);
-            free(facstr);
-            free(nstr);
-            BN_free(factor);
-        }
     }
     BN_free(x);
     BN_free(y);
@@ -361,7 +349,6 @@ void do_mixed_work(void) {
     BN_CTX_free(ctx);
 
     close(file);
-    unlink(mixed_filename);
 }
 
 static void init_mixed(long count) {
