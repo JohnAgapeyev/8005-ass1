@@ -224,8 +224,8 @@ void do_cpu_work(void) {
 
     BIGNUM *p = BN_new();
     BIGNUM *q = BN_new();
-    BN_generate_prime_ex(p, 32, 1, NULL, NULL, NULL);
-    BN_generate_prime_ex(q, 32, 1, NULL, NULL, NULL);
+    BN_generate_prime_ex(p, 40, 1, NULL, NULL, NULL);
+    BN_generate_prime_ex(q, 40, 1, NULL, NULL, NULL);
     BN_CTX *ctx = BN_CTX_new();
 
     BN_mul(n, p, q, ctx);
@@ -275,8 +275,8 @@ void do_cpu_work(void) {
 void do_io_work(void) {
     const char *filename = ".tmp.txt";
     int file = open(filename, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-    long file_size = 1 << 20;
-    long read_count = 4096;
+    long file_size = 1 << 22;
+    long read_count = 128;
     //Set file size to 1 MB
     ftruncate(file, file_size);
 
@@ -359,9 +359,9 @@ static void init_mixed(long count) {
 
     int file = open(mixed_filename, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 
-    for (long i = 0; i < 100 * count; ++i) {
-        BN_generate_prime_ex(p, 24, 1, NULL, NULL, NULL);
-        BN_generate_prime_ex(q, 24, 1, NULL, NULL, NULL);
+    for (long i = 0; i < 500 * count; ++i) {
+        BN_generate_prime_ex(p, 16, 1, NULL, NULL, NULL);
+        BN_generate_prime_ex(q, 16, 1, NULL, NULL, NULL);
         BN_mul(n, p, q, ctx);
 
         char *n_hex = BN_bn2hex(n);
