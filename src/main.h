@@ -1,6 +1,27 @@
 #ifndef MAIN_H
 #define MAIN_H
 
+/*
+ * HEADER FILE: main.h - Main application header
+ *
+ * PROGRAM: 8005-ass1
+ *
+ * DATE: Jan. 20, 2018
+ *
+ * FUNCTIONS:
+ * void thread_work(const long count);
+ * void process_work(const long count);
+ * void openmp_work(const long count);
+ * void *do_work(void *arg);
+ * void do_cpu_work(void);
+ * void do_io_work(void);
+ * void do_mixed_work(void);
+ *
+ * DESIGNER: John Agapeyev
+ *
+ * PROGRAMMER: John Agapeyev
+ */
+
 static struct option long_options[] = {
     {"workers",    required_argument, 0, 'w'},
     {"help",       no_argument,       0, 'h'},

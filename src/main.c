@@ -1,3 +1,24 @@
+/*
+ * SOURCE FILE: epoll.c - Implementation of functions declared in main.h
+ *
+ * PROGRAM: 8005-ass1
+ *
+ * DATE: Jan. 20, 2018
+ *
+ * FUNCTIONS:
+ * void thread_work(const long count);
+ * void process_work(const long count);
+ * void openmp_work(const long count);
+ * void *do_work(void *arg);
+ * void do_cpu_work(void);
+ * void do_io_work(void);
+ * void do_mixed_work(void);
+ * static void init_mixed(long count);
+ *
+ * DESIGNER: John Agapeyev
+ *
+ * PROGRAMMER: John Agapeyev
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,6 +35,28 @@
 static const char *mixed_filename = ".input.txt";
 static void init_mixed(long count);
 
+/*
+ * FUNCTION: main
+ *
+ * DATE:
+ * Jan. 20, 2018
+ *
+ * DESIGNER:
+ * John Agapeyev
+ *
+ * PROGRAMMER:
+ * John Agapeyev
+ *
+ * INTERFACE:
+ * int main(int argc, char **argv);
+ *
+ * PARAMETERS:
+ * int argc - The number of command arguments
+ * char **argv - The list of command arguments
+ *
+ * RETURNS:
+ * int - The return code for the program
+ */
 int main(int argc, char **argv) {
     long worker_count = 8;
     enum worker_type type = 0;
@@ -77,6 +120,27 @@ int main(int argc, char **argv) {
     return EXIT_SUCCESS;
 }
 
+/*
+ * FUNCTION: thread_work
+ *
+ * DATE:
+ * Jan. 20, 2018
+ *
+ * DESIGNER:
+ * John Agapeyev
+ *
+ * PROGRAMMER:
+ * John Agapeyev
+ *
+ * INTERFACE:
+ * void thread_work(const long count);
+ *
+ * PARAMETERS:
+ * const long count - The number of threads to create
+ *
+ * RETURNS:
+ * void
+ */
 void thread_work(const long count) {
     printf("Thread start\n");
     pthread_t threads[count];
@@ -94,6 +158,27 @@ void thread_work(const long count) {
     printf("Thread end\n");
 }
 
+/*
+ * FUNCTION: process_work
+ *
+ * DATE:
+ * Jan. 20, 2018
+ *
+ * DESIGNER:
+ * John Agapeyev
+ *
+ * PROGRAMMER:
+ * John Agapeyev
+ *
+ * INTERFACE:
+ * void process_work(const long count);
+ *
+ * PARAMETERS:
+ * const long count - The number of processes to create
+ *
+ * RETURNS:
+ * void
+ */
 void process_work(const long count) {
     printf("Process start\n");
     signal(SIGQUIT, SIG_IGN);
@@ -116,6 +201,27 @@ void process_work(const long count) {
     printf("Process end\n");
 }
 
+/*
+ * FUNCTION: openmp_work
+ *
+ * DATE:
+ * Jan. 20, 2018
+ *
+ * DESIGNER:
+ * John Agapeyev
+ *
+ * PROGRAMMER:
+ * John Agapeyev
+ *
+ * INTERFACE:
+ * void openmp_work(const long count);
+ *
+ * PARAMETERS:
+ * const long count - The number of threads to create
+ *
+ * RETURNS:
+ * void
+ */
 void openmp_work(const long count) {
     printf("OpenMP start\n");
     omp_set_dynamic(0);
@@ -126,6 +232,30 @@ void openmp_work(const long count) {
     printf("OpenMP end\n");
 }
 
+/*
+ * FUNCTION: do_work
+ *
+ * DATE:
+ * Jan. 20, 2018
+ *
+ * DESIGNER:
+ * John Agapeyev
+ *
+ * PROGRAMMER:
+ * John Agapeyev
+ *
+ * INTERFACE:
+ * void *do_work(void *arg);
+ *
+ * PARAMETERS:
+ * void *arg - Required for pthread api - Unused
+ *
+ * RETURNS:
+ * void * - Required for pthread api - Unused
+ *
+ * NOTES:
+ * Runs cpu, I/O, and mixed tests and prints the resulting time taken to stdout.
+ */
 void *do_work(void *arg) {
     (void)arg;
     struct timespec start, end;
@@ -147,6 +277,27 @@ void *do_work(void *arg) {
     return NULL;
 }
 
+/*
+ * FUNCTION: do_cpu_work
+ *
+ * DATE:
+ * Jan. 20, 2018
+ *
+ * DESIGNER:
+ * John Agapeyev
+ *
+ * PROGRAMMER:
+ * John Agapeyev
+ *
+ * INTERFACE:
+ * void do_cpu_work(void);
+ *
+ * RETURNS:
+ * void
+ *
+ * NOTES:
+ * Factors an 88-bit RSA modulus using the Pollard Rho Algorithm.
+ */
 void do_cpu_work(void) {
     BIGNUM *x = BN_new();
     BIGNUM *y = BN_new();
@@ -203,6 +354,27 @@ void do_cpu_work(void) {
     BN_CTX_free(ctx);
 }
 
+/*
+ * FUNCTION: do_io_work
+ *
+ * DATE:
+ * Jan. 20, 2018
+ *
+ * DESIGNER:
+ * John Agapeyev
+ *
+ * PROGRAMMER:
+ * John Agapeyev
+ *
+ * INTERFACE:
+ * void do_io_work(void);
+ *
+ * RETURNS:
+ * void
+ *
+ * NOTES:
+ * Reads and writes randomly over a 8 MiB file.
+ */
 void do_io_work(void) {
     const char *filename = ".tmp.txt";
     int file = open(filename, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
@@ -222,6 +394,27 @@ void do_io_work(void) {
     unlink(filename);
 }
 
+/*
+ * FUNCTION: do_mixed_work
+ *
+ * DATE:
+ * Jan. 20, 2018
+ *
+ * DESIGNER:
+ * John Agapeyev
+ *
+ * PROGRAMMER:
+ * John Agapeyev
+ *
+ * INTERFACE:
+ * void do_mixed_work(void);
+ *
+ * RETURNS:
+ * void
+ *
+ * NOTES:
+ * Reads in 36-bit RSA moduli from a file, factors them, then stores them into an output file.
+ */
 void do_mixed_work(void) {
     int file = open(mixed_filename, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
     FILE *file_p = fdopen(file, "rwb");
@@ -299,6 +492,30 @@ void do_mixed_work(void) {
     unlink(out_filename);
 }
 
+/*
+ * FUNCTION: init_mixed
+ *
+ * DATE:
+ * Jan. 20, 2018
+ *
+ * DESIGNER:
+ * John Agapeyev
+ *
+ * PROGRAMMER:
+ * John Agapeyev
+ *
+ * INTERFACE:
+ * static void init_mixed(long count);
+ *
+ * PARAMETERS:
+ * long count - The number of workers that will be used
+ *
+ * RETURNS:
+ * void
+ *
+ * NOTES:
+ * Writes 3500 36-bit RSA moduli to a file for each worker that will be used in the mixed tests.
+ */
 static void init_mixed(long count) {
     int file = open(mixed_filename, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 
