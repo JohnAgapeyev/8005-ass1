@@ -72,6 +72,7 @@ int main(int argc, char **argv) {
                 if (worker_count < 5 || worker_count > 256) {
                     printf("Worker count must be bewteen 5 and 256\n");
                     print_help();
+                    return EXIT_SUCCESS;
                 }
                 break;
             case 't':
@@ -95,20 +96,23 @@ int main(int argc, char **argv) {
                 return EXIT_SUCCESS;
         }
     }
-    init_mixed(worker_count);
     switch(type) {
         case ALL:
+            init_mixed(worker_count);
             thread_work(worker_count);
             process_work(worker_count);
             openmp_work(worker_count);
             break;
         case THREADS:
+            init_mixed(worker_count);
             thread_work(worker_count);
             break;
         case PROCESSES:
+            init_mixed(worker_count);
             process_work(worker_count);
             break;
         case OPENMP:
+            init_mixed(worker_count);
             openmp_work(worker_count);
             break;
         default:
